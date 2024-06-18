@@ -1,0 +1,529 @@
+câu 2 đề 4 :
+
+db public class Db extends SQLiteOpenHelper {
+    public static final String DB_NAME = "db.sqlite";
+    public static final int VERSION = 1;
+    public static final String TBL_NAME = "C2";
+    public static final String COL_CODE = "colCode";
+    public static final String COL_NAME =  "colName";
+    public static final String COL_PRICE =  "colPrice";
+    public Db(@Nullable Context context) {
+        super(context, DB_NAME, null, VERSION);
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        String sql = "CREATE TABLE IF NOT EXISTS " + TBL_NAME + " ( " + COL_CODE + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + COL_NAME + " NVARCHAR(50), " + COL_PRICE + " REAL) ";
+
+        db.execSQL(sql);
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        String sql = "DROP TABLE IF EXISTS " + TBL_NAME;
+
+        db.execSQL(sql);
+        onCreate(db);
+    }
+    public Cursor getData(String sql){
+        try{
+            SQLiteDatabase db = getReadableDatabase();
+            return db.rawQuery(sql, null);
+        }catch (Exception e){
+            System.out.println(e);
+            return null;
+        }
+    }
+
+
+    public boolean execSql(String sql){
+        try{
+            SQLiteDatabase db = getWritableDatabase();
+            db.execSQL(sql);
+            return true;
+        }catch (Exception e){
+            return false;
+        }
+    }
+
+    public int getNumberOfRows(){
+        Cursor cursor = getData("SELECT * FROM " + TBL_NAME);
+        int numberOfRows = cursor.getCount();
+        cursor.close();
+
+        return numberOfRows;
+    }
+
+    public void createSampleData(){
+        if(getNumberOfRows() == 0){
+            try {
+                execSql("INSERT INTO " + TBL_NAME + " VALUES(null, 'Thuốc trừ sâu', 10000)");
+                execSql("INSERT INTO " + TBL_NAME + " VALUES(null, 'Thuốc diệt bug', 10000)");
+                execSql("INSERT INTO " + TBL_NAME + " VALUES(null, 'Bỉ chấp 0.5', 500000)");
+                execSql("INSERT INTO " + TBL_NAME + " VALUES(null, 'Pháp chấp 1.5', 200000)");
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+    }
+
+dialog
+public class DiaLogActivity extends AppCompatActivity {
+    ActivityDiaLogBinding binding;
+    Product product;
+    Db db;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        binding = ActivityDiaLogBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+
+        db = new Db(DiaLogActivity.this);
+
+        getData();
+        addEvents();
+    }
+
+    private void addEvents() {
+        binding.btnLuu.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String name = binding.edProductName.getText().toString();
+                Double price = Double.valueOf(binding.edProductPrice.getText().toString());
+
+                db.execSql(" UPDATE " + Db.TBL_NAME + " SET " + db.COL_NAME + " = '" + name + "', " + db.COL_PRICE + " = " + price +
+                        " WHERE " + db.COL_CODE + " = " + product.getProductCode());
+
+
+                finish();
+            }
+        });
+
+        binding.btnTroVe.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
+    }
+
+    private void getData() {
+            Intent iGet = getIntent();
+            product = (Product) iGet.getSerializableExtra("product");
+
+            binding.edProductCode.setText(String.valueOf(product.productCode));
+            binding.edProductName.setText(product.productName);
+            binding.edProductPrice.setText(String.format("%.1f", product.productPrice));
+    }
+
+
+adapter:
+public class ItemAdapter extends BaseAdapter {
+    Context context;
+    int layout;
+    List<Product> productList;
+
+    public ItemAdapter(Context context, int layout, List<Product> productList) {
+        this.context = context;
+        this.layout = layout;
+        this.productList = productList;
+    }
+
+    @Override
+    public int getCount() {
+        return productList.size();
+    }
+
+    @Override
+    public Object getItem(int position) {
+        return productList.get(position);
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return 0;
+    }
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+        ViewHolder holder;
+        if (convertView == null){
+            holder = new ViewHolder();
+            LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+            convertView = inflater.inflate(layout, null);
+
+            holder.productCode = convertView.findViewById(R.id.productCode);
+            holder.productName = convertView.findViewById(R.id.productName);
+            holder.productPrice = convertView.findViewById(R.id.productPrice);
+
+            convertView.setTag(holder);
+        }else {
+            holder = (ViewHolder) convertView.getTag();
+        }
+
+        Product product = productList.get(position);
+
+        holder.productCode.setText(String.valueOf(product.productCode));
+        holder.productName.setText(product.productName);
+        holder.productPrice.setText(String.format("%.0f đ", product.getProductPrice()));
+
+        return convertView;
+    }
+
+    public class ViewHolder{
+        TextView productCode, productName, productPrice;
+    }
+
+model :
+public class Product implements Serializable {
+    int productCode;
+    String productName;
+    double productPrice;
+
+    public Product(int productCode, String productName, double productPrice) {
+        this.productCode = productCode;
+        this.productName = productName;
+        this.productPrice = productPrice;
+    }
+
+    public int getProductCode() {
+        return productCode;
+    }
+
+    public void setProductCode(int productCode) {
+        this.productCode = productCode;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
+
+    public double getProductPrice() {
+        return productPrice;
+    }
+
+    public void setProductPrice(double productPrice) {
+        this.productPrice = productPrice;
+    }
+}
+main:
+
+public class Cau_2_Activity extends AppCompatActivity {
+    ActivityCau2Binding binding;
+    Db db;
+    ItemAdapter adapter;
+    ArrayList<Product> products;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        binding = ActivityCau2Binding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+
+        db = new Db(Cau_2_Activity.this);
+        db.createSampleData();
+
+        loadData();
+        addEvents();
+    }
+
+    private void addEvents() {
+        binding.lvProduct.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                Intent iDialog = new Intent(Cau_2_Activity.this, DiaLogActivity.class);
+                iDialog.putExtra("product", products.get(position));
+                startActivity(iDialog);
+
+                return false;
+            }
+        });
+    }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadData();
+    }
+
+    private void loadData() {
+        adapter = new ItemAdapter(Cau_2_Activity.this, R.layout.item, getDataFromDb());
+        binding.lvProduct.setAdapter(adapter);
+    }
+
+    private List<Product> getDataFromDb() {
+        products = new ArrayList<>();
+
+        Cursor cursor = db.getData("SELECT * FROM " + Db.TBL_NAME);
+        cursor.moveToFirst();
+        while (!cursor.isAfterLast()){
+            products.add(new Product(cursor.getInt(0), cursor.getString(1), cursor.getDouble(2)));
+
+            cursor.moveToNext();
+        }
+        cursor.close();
+        return products;
+    }
+}
+
+xml :
+activity main:
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Cau_2_Activity"
+    android:orientation="vertical">
+
+    <ListView
+        android:id="@+id/lvProduct"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="10dp"/>
+
+dialog :
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".DiaLogActivity"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nhập mã sản phẩm: "
+            android:textColor="@color/black"
+            android:textSize="16sp"
+            />
+
+        <EditText
+            android:id="@+id/ed_productCode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/black"
+            android:textSize="16sp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nhập tên sản phẩm: "
+            android:textColor="@color/black"
+            android:textSize="16sp"/>
+
+        <EditText
+            android:id="@+id/ed_productName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/black"
+            android:textSize="16sp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nhập giá sản phẩm: "
+            android:textColor="@color/black"
+            android:textSize="16sp"/>
+
+        <EditText
+            android:id="@+id/ed_productPrice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/black"
+            android:textSize="16sp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_gravity="end">
+
+        <Button
+            android:id="@+id/btnLuu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Lưu lại"
+            android:layout_marginRight="20dp"/>
+
+        <Button
+            android:id="@+id/btnTroVe"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Trở về"/>
+    </LinearLayout>
+
+
+</LinearLayout>
+
+dialog layout :
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nhập mã sản phẩm: "
+            android:textSize="16sp"/>
+
+        <EditText
+            android:id="@+id/ed_productCode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nhập tên sản phẩm: "
+            android:textSize="16sp"/>
+
+        <EditText
+            android:id="@+id/ed_productName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nhập giá sản phẩm: "
+            android:textSize="16sp"/>
+
+        <EditText
+            android:id="@+id/ed_productPrice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_gravity="end">
+
+        <Button
+            android:id="@+id/btnLuu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Lưu lại"
+            android:layout_marginRight="20dp"/>
+
+        <Button
+            android:id="@+id/btnTroVe"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Trở về"/>
+    </LinearLayout>
+
+</LinearLayout>
+item xml:
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Mã sản phẩm: "
+            android:textSize="16sp"/>
+
+        <TextView
+            android:id="@+id/productCode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="10dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tên sản phẩm: "
+            android:textSize="16sp"/>
+
+        <TextView
+            android:id="@+id/productName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="10dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Giá sản phẩm: "
+            android:textSize="16sp"/>
+
+        <TextView
+            android:id="@+id/productPrice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"/>
+    </LinearLayout>
+</LinearLayout>
